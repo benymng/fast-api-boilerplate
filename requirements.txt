@@ -1,0 +1,27 @@
+# FastAPI and server
+fastapi==0.115.0
+uvicorn[standard]==0.31.0
+gunicorn==23.0.0
+python-multipart==0.0.9
+
+# Database
+sqlalchemy==2.0.35
+psycopg2-binary==2.9.9
+alembic==1.13.3
+
+# Environment variables
+python-dotenv==1.0.1
+
+# Validation
+pydantic==2.9.2
+pydantic-settings==2.5.2
+email-validator==2.2.0
+
+# CORS
+fastapi-cors==0.0.6
+
+# Optional: for async database support
+asyncpg==0.29.0
+
+# Optional: for scheduled tasks
+apscheduler==3.10.4
