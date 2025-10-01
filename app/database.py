@@ -1,15 +1,14 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from app.config import get_settings
-
-settings = get_settings()
+from .config import settings
 
 # Create database engine
 engine = create_engine(
     settings.get_database_url(),
     pool_pre_ping=True,
-    echo=settings.DEBUG,
+    pool_size=5,
+    max_overflow=10,
 )
 
 # Create SessionLocal class
