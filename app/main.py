@@ -1,71 +1,81 @@
+import logging
+import time
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import time
 
-from app.config import get_settings
-from app.database import engine, Base
 from app.api.routes import api_router
+from app.config import get_settings
+from app.database import Base, engine
 
-settings = get_settings()
-
-# Initialize FastAPI app
-app = FastAPI(
-    title=settings.APP_NAME,
-    debug=settings.DEBUG,
-)
-
-# Configure CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+logger = logging.getLogger(__name__)
 
 
-@app.on_event("startup")
-def startup_event():
-    """Initialize database tables on startup"""
-    # Retry logic for database connection
-    max_retries = 5
-    retry_delay = 2
-    
-    for attempt in range(max_retries):
+def init_db(max_retries: int = 5, retry_delay_seconds: int = 2) -> None:
+    """Create tables for local development.
+
+    For production apps, replace this with Alembic migrations in your deploy flow.
+    """
+    for attempt in range(1, max_retries + 1):
         try:
             Base.metadata.create_all(bind=engine)
-            print("Database tables created successfully")
-            break
-        except Exception as e:
-            if attempt < max_retries - 1:
-                print(f"Database connection attempt {attempt + 1} failed: {e}")
-                print(f"Retrying in {retry_delay} seconds...")
-                time.sleep(retry_delay)
-            else:
-                print(f"Failed to connect to database after {max_retries} attempts")
+            logger.info("Database tables are ready")
+            return
+        except Exception:
+            if attempt == max_retries:
+                logger.exception("Database initialization failed")
                 raise
 
-
-@app.get("/")
-async def root():
-    """Root endpoint"""
-    return {
-        "message": "Welcome to Alira Backend API",
-        "docs": "/docs",
-        "redoc": "/redoc"
-    }
+            logger.warning(
+                "Database initialization failed on attempt %s/%s; retrying in %s seconds",
+                attempt,
+                max_retries,
+                retry_delay_seconds,
+            )
+            time.sleep(retry_delay_seconds)
 
 
-@app.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy"}
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    init_db()
+    yield
 
 
-# Include API routes
-app.include_router(api_router, prefix=settings.API_V1_PREFIX)
+def create_app() -> FastAPI:
+    settings = get_settings()
+
+    app = FastAPI(
+        title=settings.app_name,
+        debug=settings.debug,
+        lifespan=lifespan,
+    )
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.allowed_cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    @app.get("/", tags=["system"])
+    async def root() -> dict[str, str]:
+        return {
+            "message": f"Welcome to {settings.app_name}",
+            "docs": "/docs",
+            "health": "/health",
+        }
+
+    @app.get("/health", tags=["system"])
+    async def health_check() -> dict[str, str]:
+        return {"status": "healthy"}
+
+    app.include_router(api_router, prefix=settings.api_v1_prefix)
+    return app
 
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+app = create_app()
+
+__all__ = ["app", "create_app"]

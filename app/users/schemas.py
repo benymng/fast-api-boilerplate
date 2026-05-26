@@ -1,33 +1,28 @@
-from pydantic import BaseModel, EmailStr
 from datetime import datetime
-from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class UserBase(BaseModel):
-    """Base User schema"""
     email: EmailStr
-    username: str
+    username: str = Field(min_length=3, max_length=50)
 
 
 class UserCreate(UserBase):
-    """Schema for creating a user"""
-    password: str
+    password: str = Field(min_length=8, max_length=128)
 
 
 class UserUpdate(BaseModel):
-    """Schema for updating a user"""
-    email: Optional[EmailStr] = None
-    username: Optional[str] = None
-    password: Optional[str] = None
-    is_active: Optional[bool] = None
+    email: EmailStr | None = None
+    username: str | None = Field(default=None, min_length=3, max_length=50)
+    password: str | None = Field(default=None, min_length=8, max_length=128)
+    is_active: bool | None = None
 
 
 class UserResponse(UserBase):
-    """Schema for user response"""
     id: int
     is_active: bool
     created_at: datetime
-    updated_at: Optional[datetime] = None
+    updated_at: datetime | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

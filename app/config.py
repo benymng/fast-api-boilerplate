@@ -1,50 +1,32 @@
-from pydantic_settings import BaseSettings
 from functools import lru_cache
+from typing import Literal
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 class Settings(BaseSettings):
-    # Application
-    APP_NAME: str = "Alira Backend"
-    DEBUG: bool = True
-    API_V1_PREFIX: str = "/api/v1"
-    ENVIRONMENT: str = "development"  # development, production
+    """Application settings loaded from environment variables."""
 
-    # Local Database
-    DATABASE_USER: str = "postgres"
-    DATABASE_PASSWORD: str = "postgres"
-    DATABASE_NAME: str = "alira_db"
-    DATABASE_HOST: str = "postgres"
-    DATABASE_PORT: str = "5432"
-    DATABASE_URL: str = ""
+    app_name: str = "FastAPI Boilerplate"
+    environment: Literal["development", "test", "production"] = "development"
+    debug: bool = True
+    api_v1_prefix: str = "/api/v1"
 
-    # Production Database (Supabase)
-    PROD_DATABASE_URL: str = ""
-    PROD_DATABASE_USER: str = ""
-    PROD_DATABASE_PASSWORD: str = ""
-    PROD_DATABASE_NAME: str = "postgres"
-    PROD_DATABASE_HOST: str = ""
-    PROD_DATABASE_PORT: str = "6543"
+    database_url: str = "postgresql+psycopg://postgres:postgres@postgres:5432/app_db"
+    cors_origins: str = "http://localhost:3000,http://localhost:8000"
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
 
-    def get_database_url(self) -> str:
-        """Get the appropriate database URL based on environment"""
-        if self.ENVIRONMENT == "production":
-            # Use PROD_DATABASE_URL if provided, otherwise construct it
-            if self.PROD_DATABASE_URL:
-                return self.PROD_DATABASE_URL
-            return f"postgresql://{self.PROD_DATABASE_USER}:{self.PROD_DATABASE_PASSWORD}@{self.PROD_DATABASE_HOST}:{self.PROD_DATABASE_PORT}/{self.PROD_DATABASE_NAME}"
-        else:
-            # Use local database (for development with Docker)
-            if self.DATABASE_URL:
-                return self.DATABASE_URL
-            return f"postgresql://{self.DATABASE_USER}:{self.DATABASE_PASSWORD}@{self.DATABASE_HOST}:{self.DATABASE_PORT}/{self.DATABASE_NAME}"
+    @property
+    def allowed_cors_origins(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
 
-@lru_cache()
-def get_settings():
+@lru_cache
+def get_settings() -> Settings:
     return Settings()
-
-
-settings = get_settings()

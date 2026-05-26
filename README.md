@@ -1,198 +1,175 @@
-# Alira Backend
+# FastAPI Boilerplate
 
-FastAPI backend application with SQLAlchemy ORM and PostgreSQL database, fully containerized with Docker.
+A small, production-shaped FastAPI starter with SQLAlchemy, PostgreSQL, Docker Compose, typed settings, a sample user module, and basic tests.
 
-## Features
+## What You Get
 
-- ⚡ **FastAPI** - Modern, fast web framework for building APIs
-- 🗄️ **SQLAlchemy** - Powerful SQL toolkit and ORM
-- 🐘 **PostgreSQL** - Robust relational database
-- 🐳 **Docker** - Containerized application with Docker Compose
-- 🔧 **PgAdmin** - Web-based PostgreSQL administration tool
-- ⏰ **Scheduler** - Optional background task scheduler (APScheduler)
-- 📝 **Auto Documentation** - Interactive API docs (Swagger UI & ReDoc)
+- FastAPI app factory with `/`, `/health`, Swagger UI, and ReDoc
+- Versioned API routing under `/api/v1`
+- PostgreSQL through SQLAlchemy 2.x
+- Pydantic settings loaded from `.env`
+- Docker Compose for API, database, PgAdmin, and an optional scheduler
+- Example `users` module with models, schemas, routes, and services
+- Password hashing, input validation, duplicate handling, and CRUD tests
+- Ruff and pytest configuration in `pyproject.toml`
 
-## Project Structure
+## Quick Start With Docker
 
-```
-alira-backend/
-├── app/
-│   ├── __init__.py
-│   ├── main.py          # FastAPI application entry point
-│   ├── config.py        # Configuration and settings
-│   ├── database.py      # Database connection and session
-│   ├── models.py        # SQLAlchemy models
-│   ├── schemas.py       # Pydantic schemas for validation
-│   └── scheduler.py     # Background tasks scheduler
-├── .env                 # Environment variables (created from .env.example)
-├── .env.example         # Example environment variables
-├── .gitignore
-├── Dockerfile
-├── docker-compose.yml
-├── requirements.txt
-└── README.md
+```bash
+cp .env.example .env
+docker compose up --build
 ```
 
-## Prerequisites
+Open:
 
-- Docker
-- Docker Compose
+- API: http://localhost:8000
+- Docs: http://localhost:8000/docs
+- Health: http://localhost:8000/health
+- PgAdmin: http://localhost:8888
 
-## Quick Start
+Default PgAdmin login comes from `.env.example`:
 
-1. **Clone the repository** (if applicable)
-   ```bash
-   git clone <repository-url>
-   cd alira-backend
-   ```
+- Email: `admin@example.com`
+- Password: `admin`
 
-2. **Set up environment variables**
+Inside PgAdmin, connect to PostgreSQL with:
 
-3. **Build and start the containers**
-   ```bash
-   docker-compose up --build
-   ```
+- Host: `postgres`
+- Port: `5432`
+- Database: `app_db`
+- Username: `postgres`
+- Password: `postgres`
 
-4. **Access the services**
-   - **API**: http://localhost:8000
-   - **API Documentation (Swagger)**: http://localhost:8000/docs
-   - **API Documentation (ReDoc)**: http://localhost:8000/redoc
-   - **PgAdmin**: http://localhost:8888
-     - Email: `admin@alira.com`
-     - Password: `admin`
+## Local Development
 
-## Services
+Run PostgreSQL yourself or keep only the database container running:
 
-### Web (FastAPI)
-- Main API application
-- Hot-reload enabled for development
-- Runs on port 8000
+```bash
+docker compose up postgres
+```
 
-### PostgreSQL
-- Database service
-- Persistent data storage with Docker volumes
-- Runs on port 5432
+Create a virtual environment and install dependencies:
 
-### PgAdmin
-- Web-based database administration
-- Runs on port 8888
-- Connect to database using:
-  - Host: `postgres`
-  - Port: `5432`
-  - Database: `alira_db` (or your DATABASE_NAME)
-  - Username: `postgres` (or your DATABASE_USER)
-  - Password: `postgres` (or your DATABASE_PASSWORD)
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+```
 
-### Scheduler (Optional)
-- Background task scheduler
-- Uncomment in docker-compose.yml if needed
-- Runs scheduled jobs using APScheduler
+If you run the API outside Docker, set `DATABASE_URL` to a localhost database URL:
+
+```env
+DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/app_db
+```
+
+Start the API:
+
+```bash
+uvicorn app.main:app --reload
+```
+
+## Common Commands
+
+```bash
+pytest
+ruff check .
+ruff format .
+docker compose down
+docker compose down -v  # also deletes local database volumes
+```
 
 ## API Endpoints
 
-### General
-- `GET /` - Welcome message
-- `GET /health` - Health check
+- `GET /` - API welcome payload
+- `GET /health` - health check
+- `POST /api/v1/users` - create a user
+- `GET /api/v1/users` - list users
+- `GET /api/v1/users/{user_id}` - fetch a user
+- `PATCH /api/v1/users/{user_id}` - update a user
+- `DELETE /api/v1/users/{user_id}` - delete a user
 
-### Users (Example CRUD)
-- `POST /api/v1/users/` - Create a new user
-- `GET /api/v1/users/` - Get all users
-- `GET /api/v1/users/{user_id}` - Get a specific user
-- `PUT /api/v1/users/{user_id}` - Update a user
-- `DELETE /api/v1/users/{user_id}` - Delete a user
+## Configuration
 
-## Development
+Settings are defined in `app/config.py` and loaded from environment variables.
 
-### Running without Docker
-1. Install Python 3.12+
-2. Create a virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Set up PostgreSQL database
-5. Update DATABASE_URL in .env
-6. Run the application:
-   ```bash
-   uvicorn app.main:app --reload
-   ```
-
-### Database Migrations
-To use Alembic for database migrations:
-
-```bash
-# Initialize Alembic (first time only)
-docker-compose exec web alembic init alembic
-
-# Create a new migration
-docker-compose exec web alembic revision --autogenerate -m "description"
-
-# Apply migrations
-docker-compose exec web alembic upgrade head
-
-# Rollback migration
-docker-compose exec web alembic downgrade -1
-```
-
-### Stopping the Application
-```bash
-docker-compose down
-```
-
-### Stopping and removing volumes (⚠️ deletes database data)
-```bash
-docker-compose down -v
-```
-
-## Production Deployment
-
-For production, update the Dockerfile CMD to use Gunicorn:
-
-```dockerfile
-CMD ["gunicorn", "app.main:app", "--workers", "4", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000", "--timeout", "60"]
-```
-
-Also update docker-compose.yml command:
-```yaml
-command: gunicorn app.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --timeout 60
-```
-
-And remember to:
-- Set `DEBUG=False` in .env
-- Configure CORS properly in `app/main.py`
-- Use strong passwords
-- Implement proper password hashing (e.g., with `passlib` and `bcrypt`)
-- Add authentication and authorization
-- Use environment-specific configurations
-
-## Environment Variables
-
-Key environment variables in `.env`:
+Important variables:
 
 ```env
-DATABASE_USER=postgres
-DATABASE_PASSWORD=postgres
-DATABASE_NAME=alira_db
-DATABASE_HOST=postgres
-DATABASE_PORT=5432
-DATABASE_URL=
-
-APP_NAME=Alira Backend
-DEBUG=True
+APP_NAME=FastAPI Boilerplate
+ENVIRONMENT=development
+DEBUG=true
 API_V1_PREFIX=/api/v1
+DATABASE_URL=postgresql+psycopg://postgres:postgres@postgres:5432/app_db
+CORS_ORIGINS=http://localhost:3000,http://localhost:8000
 ```
 
-## Contributing
+`docker-compose.yml` has defaults, so the app can start without a `.env` file. Copying `.env.example` is still recommended so each project has explicit local settings.
 
-1. Create a new branch
-2. Make your changes
-3. Test thoroughly
-4. Submit a pull request
+## Project Layout
 
-## License
+```text
+app/
+├── main.py              # FastAPI app factory and lifespan setup
+├── config.py            # Environment-based settings
+├── database.py          # SQLAlchemy engine, session, and Base
+├── scheduler.py         # Optional standalone scheduler process
+├── api/
+│   └── routes.py        # API router aggregation
+└── users/
+    ├── models.py        # SQLAlchemy model
+    ├── schemas.py       # Pydantic request/response models
+    ├── services.py      # Business logic and persistence operations
+    └── routes.py        # HTTP endpoints
+```
 
-MIT
+## Adding A Feature Module
+
+Create a new folder under `app/`, for example `app/posts/`, with the same shape as `app/users/`:
+
+```text
+app/posts/
+├── __init__.py
+├── models.py
+├── schemas.py
+├── services.py
+└── routes.py
+```
+
+Then register the router in `app/api/routes.py`:
+
+```python
+from app.posts.routes import router as posts_router
+
+api_router.include_router(posts_router)
+```
+
+Keep route handlers thin. Put validation that belongs to HTTP in `routes.py`, business rules and database writes in `services.py`, and table definitions in `models.py`.
+
+## Database Migrations
+
+This starter creates tables automatically on startup for convenience. For a real production app, wire Alembic into deployment and disable automatic table creation.
+
+Basic Alembic flow:
+
+```bash
+alembic init alembic
+alembic revision --autogenerate -m "create initial tables"
+alembic upgrade head
+```
+
+## Production Notes
+
+- Set `ENVIRONMENT=production` and `DEBUG=false`
+- Replace broad local CORS origins with your actual frontend origins
+- Run migrations with Alembic instead of relying on startup table creation
+- Use a managed secret store or deployment platform variables for credentials
+- Consider running with Gunicorn:
+
+```bash
+gunicorn app.main:app \
+  --workers 4 \
+  --worker-class uvicorn.workers.UvicornWorker \
+  --bind 0.0.0.0:8000 \
+  --timeout 60
+```
